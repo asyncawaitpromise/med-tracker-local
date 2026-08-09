@@ -89,7 +89,7 @@ for secret in "${GH_SECRETS[@]}"; do
     printf "  %-30s [dry-run]\n" "$secret"
   else
     printf "  %-30s " "$secret"
-    printf '%s' "$val" | gh secret set "$secret" --body-file -
+    printf '%s' "$val" | gh secret set "$secret"
     echo "ok"
   fi
 done
