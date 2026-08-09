@@ -1,4 +1,4 @@
-name = "astro-cf-pages"
+name = "med-tracker"
 pages_build_output_dir = "./dist"
 
 # Set your production branch (usually "main")
