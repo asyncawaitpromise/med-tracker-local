@@ -2,6 +2,7 @@
   "name": "med-tracker",
   "type": "module",
   "version": "0.0.1",
+  "packageManager": "pnpm@10.12.4",
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
