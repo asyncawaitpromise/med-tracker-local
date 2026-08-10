@@ -7,7 +7,8 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "deploy": "astro build && wrangler deploy --env production"
   },
   "dependencies": {
     "@astrojs/react": "^4.1.4",
@@ -21,6 +22,7 @@
     "tailwindcss": "^3.4.17"
   },
   "devDependencies": {
-    "daisyui": "^4.12.23"
+    "daisyui": "^4.12.23",
+    "wrangler": "^4.120.0"
   }
 }
