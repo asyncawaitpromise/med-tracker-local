@@ -1,8 +1,8 @@
 ---
 let { title, desc, emoji } = Astro.props;
-if (Boolean(title) === false) title = "Astro CF Pages";
-if (Boolean(desc) === false) desc = "Static site on Cloudflare Pages";
-if (Boolean(emoji) === false) emoji = "🔥";
+if (Boolean(title) === false) title = "Med Tracker";
+if (Boolean(desc) === false) desc = "Track medication doses locally";
+if (Boolean(emoji) === false) emoji = "💊";
 ---
 
 <!doctype html>
@@ -31,5 +31,6 @@ if (Boolean(emoji) === false) emoji = "🔥";
     height: 100%;
     max-width: 480px;
     margin-inline: auto;
+    overflow-x: hidden;
   }
 </style>

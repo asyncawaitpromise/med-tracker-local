@@ -1,8 +1,23 @@
-# astro-cf-pages
+# med-tracker
 
-Static site starter: Astro 5 + React + Tailwind + DaisyUI + Lucide icons, deployed to Cloudflare Pages.
+A small, local-only medication dose tracker. Pick a medication, log a dose,
+and see at a glance how much you've taken today, when the next dose is
+allowed, and how close you are to the daily limit — all enforced from rules
+you configure per medication (dose sizes, daily limit, minimum hours between
+doses).
 
-No server, no Docker, no registry. CF Pages handles deploys and branch previews natively.
+## Goals
+
+- **No accounts, no backend, no database.** Every medication and dose entry
+  lives in the browser's `localStorage`. Nothing is sent anywhere.
+- **Answer one question fast:** "can I take something for this right now,
+  and how much?" — the home screen leads with that, not a data-entry form.
+- **Configurable per medication**, not hardcoded — dose sizes, unit, daily
+  limit, and minimum hours between doses are all editable in Settings, so it
+  isn't just tuned for the two seeded defaults (Ibuprofen, Tylenol).
+- **Stays simple.** No sync, no multi-user support, no notifications — if
+  those become worth the complexity later, they're deliberate additions, not
+  assumed requirements.
 
 ## Stack
 
@@ -10,7 +25,9 @@ No server, no Docker, no registry. CF Pages handles deploys and branch previews 
 - [React 19](https://react.dev) — interactive components via `client:load`
 - [Tailwind CSS](https://tailwindcss.com) + [DaisyUI](https://daisyui.com) — styling
 - [Lucide React](https://lucide.dev) — icons
-- [Cloudflare Pages](https://pages.cloudflare.com) — hosting + branch previews
+- [Cloudflare Workers](https://developers.cloudflare.com/workers/static-assets/) — static asset hosting + branch previews
+
+No server, no Docker, no registry — just `pnpm run deploy`. Worker name and custom domain live only in `.env.local` / GitHub Secrets and are provisioned automatically on deploy — nothing to edit in `wrangler.toml`, no dashboard step required.
 
 ## First-time setup
 
@@ -18,27 +35,33 @@ No server, no Docker, no registry. CF Pages handles deploys and branch previews 
 
 ```bash
 cp .env.example .env.local
-# fill in CF_ACCOUNT_ID, CF_API_TOKEN, CF_PAGES_PROJECT
+# fill in CF_ACCOUNT_ID, CF_API_TOKEN, CF_WORKER_NAME
 ```
+
+`CF_WORKER_NAME` isn't just a label — it's the identifier you deploy to and access the site through (`https://<name>.<account-subdomain>.workers.dev`, and `<name>-pr-<N>...` for previews). It's set once here; `scripts/deploy.sh` passes it to `wrangler deploy --name`, so it never needs to be repeated in `wrangler.toml`.
 
 Get your API token at [dash.cloudflare.com/profile/api-tokens](https://dash.cloudflare.com/profile/api-tokens) → **Create Custom Token**.
 
-Cloudflare's token editor scopes each permission row to a single resource type, so add two rows ("+ Add more"):
+Cloudflare's token editor scopes each permission row to a single resource type, so add the rows below ("+ Add more"):
 
 | Row | Resources | Permission |
 |---|---|---|
-| 1 (required) | Account → your account | Developer Platform → **Pages** → Edit |
-| 2 (only if setting `CF_CUSTOM_DOMAIN`) | Zone → your domain (or All zones) | DNS & Zones → **Zone** → Read |
+| 1 (required) | Account → your account | Workers Core → **Workers Scripts** → Edit |
+| 2 (only if setting a custom domain) | Zone → your domain (or All zones) | DNS & Zones → **Zone** → Edit |
+| 3 (only if setting a custom domain) | Zone → your domain (or All zones) | DNS & Zones → **DNS** → Edit |
+| 4 (only if setting a custom domain) | Zone → your domain (or All zones) | **Workers Routes** → Edit |
 
-Row 2 is read-only and only used by `scaffold.sh` to look up your zone ID — it doesn't grant DNS record access.
+Rows 2–4 gate three distinct parts of a custom-domain deploy (zone access, DNS record creation, route attachment) — all three are required together if you set `CF_CUSTOM_DOMAIN`; skip them if you're only deploying to the default `workers.dev` subdomain.
 
-### 2. Scaffold CF Pages project
+If you want a custom domain, just set `CF_CUSTOM_DOMAIN` below — nothing to edit in `wrangler.toml`. `scripts/deploy.sh` passes it to `wrangler deploy --domains`, which creates the DNS record and provisions the certificate automatically.
+
+### 2. Validate your env
 
 ```bash
 ./scripts/scaffold.sh
 ```
 
-Creates the Pages project and optional custom domain via the CF API.
+Checks `.env.local` has the required vars before you go further.
 
 ### 3. Sync CI secrets to GitHub
 
@@ -46,7 +69,7 @@ Creates the Pages project and optional custom domain via the CF API.
 ./scripts/sync-secrets.sh
 ```
 
-Pushes `CF_ACCOUNT_ID`, `CF_API_TOKEN`, `CF_PAGES_PROJECT` to GitHub Secrets so CI can deploy.
+Pushes `CF_ACCOUNT_ID`, `CF_API_TOKEN`, `CF_WORKER_NAME`, `CF_CUSTOM_DOMAIN` to GitHub Secrets so CI can deploy.
 
 ### 4. Encrypt your env for the repo (optional but recommended)
 
@@ -57,16 +80,13 @@ git add .env.local.enc && git commit -m "chore: add encrypted env"
 
 Future devs/machines: `./scripts/env-crypt.sh decrypt` to restore `.env.local`.
 
-### 5. Trigger your first deploy
-
-Pushes only deploy when tagged (see [CI](#ci) below) — a plain push won't do anything yet:
+### 5. Deploy
 
 ```bash
-git commit --allow-empty -m "chore: initial deploy [deploy]"
-git push
+pnpm run deploy
 ```
 
-Or trigger it manually from the Actions tab (**Deploy** → **Run workflow**).
+Builds and deploys to production in one step — this also handles the very first deploy.
 
 ## CI
 
@@ -74,12 +94,12 @@ Or trigger it manually from the Actions tab (**Deploy** → **Run workflow**).
 |---|---|
 | Push to `main`/`master` with `[deploy]` anywhere in the commit message | Build + deploy to production |
 | Manual trigger (Actions tab → Deploy → Run workflow) | Build + deploy to production |
-| PR labeled `preview` (or updated/reopened while labeled) | Build + deploy a branch preview |
-| PR closed | Delete that PR's preview deployment |
+| PR labeled `preview` (or updated/reopened while labeled) | Build + deploy a per-PR preview Worker |
+| PR closed | Delete that PR's preview Worker |
 
 Deploys are opt-in per commit/merge so routine PRs don't ship automatically — put `[deploy]` in the commit message (or PR title, for merge/squash commits) when you actually want it live.
 
-Branch preview URLs: `https://pr-<number>.<project>.pages.dev`
+Branch preview URLs: `https://<worker-name>-pr-<number>.<account-subdomain>.workers.dev` (requires a `workers.dev` subdomain enabled on your account).
 
 ## Local dev
 
@@ -92,6 +112,7 @@ pnpm dev
 
 | Script | Purpose |
 |---|---|
-| `scripts/scaffold.sh` | One-time CF Pages project creation |
+| `scripts/scaffold.sh` | Validates `.env.local` before your first deploy |
+| `scripts/deploy.sh` | Builds and deploys (used by `pnpm run deploy` and CI) |
 | `scripts/sync-secrets.sh` | Sync `.env.local` → GitHub Secrets |
 | `scripts/env-crypt.sh` | GPG encrypt/decrypt `.env.local` |

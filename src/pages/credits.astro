@@ -1,0 +1,33 @@
+---
+import Layout from '../layouts/Layout.astro';
+import credits from '../lib/medPhotoCredits.json';
+---
+
+<Layout title="Med Tracker — Photo Credits" emoji="💊">
+  <main class="p-6">
+    <div class="flex items-center gap-2 mb-4">
+      <a href="/settings" class="btn btn-ghost btn-sm btn-circle" aria-label="Back">←</a>
+      <h1 class="text-2xl font-bold">Photo Credits</h1>
+    </div>
+    <p class="text-sm opacity-70 mb-4">
+      Medication photos are from
+      <a class="link" href="https://commons.wikimedia.org/" target="_blank" rel="noopener">Wikimedia Commons</a>,
+      used under public domain or Creative Commons licenses.
+    </p>
+    <ul class="flex flex-col gap-2 text-sm">
+      {
+        credits.map((c) => (
+          <li class="border-b border-base-200 pb-2">
+            <span class="font-semibold">{c.label}</span>
+            {' — '}
+            <a class="link" href={c.url} target="_blank" rel="noopener">
+              {c.title}
+            </a>
+            {c.artist && <span class="opacity-70"> by {c.artist}</span>}
+            <span class="opacity-70"> ({c.license})</span>
+          </li>
+        ))
+      }
+    </ul>
+  </main>
+</Layout>

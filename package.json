@@ -8,7 +8,7 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "deploy": "astro build && wrangler deploy --env production"
+    "deploy": "bash scripts/deploy.sh"
   },
   "dependencies": {
     "@astrojs/react": "^4.1.4",
@@ -23,6 +23,7 @@
   },
   "devDependencies": {
     "daisyui": "^4.12.23",
+    "sharp": "^0.35.3",
     "wrangler": "^4.120.0"
   }
 }
