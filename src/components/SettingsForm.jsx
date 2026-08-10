@@ -209,16 +209,13 @@ function DoseEditor({ doses, unit, pendingAmount, onPendingAmountChange, onAdd, 
 }
 
 export default function SettingsForm() {
-  const [medications, setMedications] = useState([]);
+  const [medications, setMedications] = useState(getMedications);
   const [mode, setMode] = useState(null); // null | 'edit' | 'add'
   const [form, setForm] = useState(emptyForm);
   const [appliedPresetKey, setAppliedPresetKey] = useState(null);
   const [newDoseInputs, setNewDoseInputs] = useState({});
   const [newFormDoseInput, setNewFormDoseInput] = useState('');
-
-  useEffect(() => {
-    setMedications(getMedications());
-  }, []);
+  const [pendingPreset, setPendingPreset] = useState(null);
 
   function persist(updated) {
     setMedications(updated);
@@ -272,6 +269,11 @@ export default function SettingsForm() {
   function handleNameChange(value) {
     setForm((f) => ({ ...f, name: value }));
     setAppliedPresetKey(null);
+  }
+
+  function handleConfirmPreset() {
+    handleApplyPreset(pendingPreset);
+    setPendingPreset(null);
   }
 
   function handleApplyPreset(preset) {
@@ -499,7 +501,7 @@ export default function SettingsForm() {
                       key={preset.key}
                       type="button"
                       className="btn btn-sm btn-outline justify-start gap-2 h-auto py-1.5"
-                      onClick={() => handleApplyPreset(preset)}
+                      onClick={() => setPendingPreset(preset)}
                     >
                       <img
                         src={getMedPhoto(preset.icon).file}
@@ -579,6 +581,41 @@ export default function SettingsForm() {
       <a href="/credits" className="link text-xs opacity-60 self-center">
         Medication photo credits
       </a>
+
+      {pendingPreset && (
+        <div
+          className="modal modal-open"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setPendingPreset(null);
+          }}
+        >
+          <div className="modal-box">
+            <h3 className="font-bold text-lg">Not medical advice</h3>
+            <p className="py-2 text-sm opacity-70">
+              The "{pendingPreset.name}" template is a generic OTC label
+              default, not personalized medical advice. Verify the dose
+              amounts and limits with a pharmacist, doctor, or the product
+              packaging before relying on them.
+            </p>
+            <div className="modal-action">
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                onClick={() => setPendingPreset(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-primary btn-sm"
+                onClick={handleConfirmPreset}
+              >
+                Understood
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

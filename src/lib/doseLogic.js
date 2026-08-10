@@ -19,41 +19,76 @@ export function todaysTotal(doses, medicationId) {
   return todaysDoses(doses, medicationId).reduce((sum, d) => sum + d.amount, 0);
 }
 
-export function lastDoseTime(doses, medicationId) {
-  const mine = doses.filter((d) => d.medicationId === medicationId);
-  if (mine.length === 0) return null;
-  return Math.max(...mine.map((d) => d.timestamp));
+// Doses still "active" in the trailing window (oldest first), i.e. those
+// that count toward the rolling per-window cap.
+export function dosesInWindow(doses, medicationId, windowHours) {
+  const cutoff = Date.now() - windowHours * 60 * 60 * 1000;
+  return doses
+    .filter((d) => d.medicationId === medicationId && d.timestamp > cutoff)
+    .sort((a, b) => a.timestamp - b.timestamp);
+}
+
+function sumAmounts(doses) {
+  return doses.reduce((sum, d) => sum + d.amount, 0);
+}
+
+// The earliest time an additional `amount` fits under the window cap, given
+// doses (oldest first) that currently count toward it. As each dose ages
+// past windowHours it stops counting, freeing up capacity.
+function earliestWindowFit(windowedDoses, windowHours, windowCap, amount) {
+  const windowMs = windowHours * 60 * 60 * 1000;
+  let remaining = sumAmounts(windowedDoses);
+  if (remaining + amount <= windowCap) return Date.now();
+  for (const dose of windowedDoses) {
+    remaining -= dose.amount;
+    if (remaining + amount <= windowCap) return dose.timestamp + windowMs;
+  }
+  return Date.now();
 }
 
 // Medication-level status shared by all of its dose-size buttons: how much
-// has been taken today, and whether the minimum interval since the last
-// dose has elapsed yet.
+// has been taken today, and how much of the rolling per-window cap
+// (minHoursBetweenDoses wide, capped at the medication's largest configured
+// dose) is currently used up.
 export function getMedicationStatus(medication, doses) {
   const todayTotal = todaysTotal(doses, medication.id);
-  const last = lastDoseTime(doses, medication.id);
-  const intervalReadyAt = last
-    ? last + medication.minHoursBetweenDoses * 60 * 60 * 1000
+  const windowHours = medication.minHoursBetweenDoses;
+  const windowCap = medication.doses?.length
+    ? Math.max(...medication.doses.map((d) => d.amount))
     : 0;
+  const windowedDoses = dosesInWindow(doses, medication.id, windowHours);
+  const windowTotal = sumAmounts(windowedDoses);
 
   return {
     todayTotal,
     remainingToday: Math.max(0, medication.dailyLimit - todayTotal),
-    timeOk: Date.now() >= intervalReadyAt,
-    intervalReadyAt,
+    windowHours,
+    windowCap,
+    windowedDoses,
+    windowTotal,
   };
 }
 
 // Whether a specific dose size can be taken right now, given the
 // medication's shared status.
 export function canTakeAmount(status, medication, amount) {
-  return status.timeOk && status.todayTotal + amount <= medication.dailyLimit;
+  return (
+    status.todayTotal + amount <= medication.dailyLimit &&
+    status.windowTotal + amount <= status.windowCap
+  );
 }
 
 // Why a specific dose size is currently blocked, and when it next becomes
 // available. Returns null if it's available now.
 export function blockedReason(status, medication, amount) {
-  if (!status.timeOk) {
-    return { reason: 'interval', at: status.intervalReadyAt };
+  if (status.windowTotal + amount > status.windowCap) {
+    const at = earliestWindowFit(
+      status.windowedDoses,
+      status.windowHours,
+      status.windowCap,
+      amount
+    );
+    return { reason: 'window-limit', at };
   }
   if (status.todayTotal + amount > medication.dailyLimit) {
     return { reason: 'daily-limit', at: startOfTomorrow() };

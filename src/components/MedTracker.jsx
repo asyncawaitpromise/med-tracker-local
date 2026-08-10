@@ -16,15 +16,13 @@ import {
 import MedIcon from './MedIcon';
 
 export default function MedTracker() {
-  const [medications, setMedications] = useState([]);
-  const [doses, setDoses] = useState([]);
+  const [medications, setMedications] = useState(getMedications);
+  const [doses, setDoses] = useState(getDoses);
   const [, forceTick] = useState(0);
   const [confirmingClear, setConfirmingClear] = useState(false);
   const [confirmingDeleteId, setConfirmingDeleteId] = useState(null);
 
   useEffect(() => {
-    setMedications(getMedications());
-    setDoses(getDoses());
     const tick = setInterval(() => forceTick((t) => t + 1), 30000);
     return () => clearInterval(tick);
   }, []);
