@@ -22,6 +22,7 @@
     "tailwindcss": "^3.4.17"
   },
   "devDependencies": {
+    "@vite-pwa/astro": "^1.2.0",
     "daisyui": "^4.12.23",
     "sharp": "^0.35.3",
     "wrangler": "^4.120.0"

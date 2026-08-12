@@ -17,9 +17,13 @@ if (Boolean(emoji) === false) emoji = "💊";
     <meta name="generator" content={Astro.generator} />
     <title>{title}</title>
     <meta name="description" content={desc} />
+    <meta name="theme-color" content="#18181b" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
   </head>
   <body>
     <slot />
+    <script is:inline src="/registerSW.js"></script>
   </body>
 </html>
 
