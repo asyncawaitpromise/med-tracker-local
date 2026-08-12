@@ -16,6 +16,7 @@ import {
 import { findMatchingPresets } from '../lib/medPresets';
 import { randomId } from '../lib/id';
 import MedIcon from './MedIcon';
+import InstallPwaButton from './InstallPwaButton';
 
 const emptyForm = {
   name: '',
@@ -354,6 +355,7 @@ export default function SettingsForm() {
           >
             Add a medication
           </button>
+          <InstallPwaButton />
         </div>
       )}
 
