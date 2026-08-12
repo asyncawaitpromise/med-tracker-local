@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Settings, X } from 'lucide-react';
+import { Settings, X, Pencil } from 'lucide-react';
 import {
   getMedications,
   getDoses,
   addDose,
+  updateDose,
   deleteDose,
   clearDoses,
 } from '../lib/storage';
@@ -15,12 +16,28 @@ import {
 } from '../lib/doseLogic';
 import MedIcon from './MedIcon';
 
+// Local-time <input type="datetime-local"> value for a timestamp, and back.
+function toDatetimeLocal(timestamp) {
+  const d = new Date(timestamp);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
+    d.getHours()
+  )}:${pad(d.getMinutes())}`;
+}
+
+function fromDatetimeLocal(value) {
+  return new Date(value).getTime();
+}
+
 export default function MedTracker() {
   const [medications, setMedications] = useState(getMedications);
   const [doses, setDoses] = useState(getDoses);
   const [, forceTick] = useState(0);
   const [confirmingClear, setConfirmingClear] = useState(false);
   const [confirmingDeleteId, setConfirmingDeleteId] = useState(null);
+  const [editingDose, setEditingDose] = useState(null);
+  const [editAmount, setEditAmount] = useState('');
+  const [editTimestamp, setEditTimestamp] = useState('');
 
   useEffect(() => {
     const tick = setInterval(() => forceTick((t) => t + 1), 30000);
@@ -36,6 +53,22 @@ export default function MedTracker() {
     deleteDose(doseId);
     setDoses(getDoses());
     setConfirmingDeleteId(null);
+  }
+
+  function handleStartEdit(dose) {
+    setEditingDose(dose);
+    setEditAmount(String(dose.amount));
+    setEditTimestamp(toDatetimeLocal(dose.timestamp));
+  }
+
+  function handleSaveEdit(e) {
+    e.preventDefault();
+    const amount = Number(editAmount);
+    const timestamp = fromDatetimeLocal(editTimestamp);
+    if (!amount || amount <= 0 || Number.isNaN(timestamp)) return;
+    updateDose(editingDose.id, { amount, timestamp });
+    setDoses(getDoses());
+    setEditingDose(null);
   }
 
   function handleClearHistory() {
@@ -163,6 +196,13 @@ export default function MedTracker() {
                   })}
                   <button
                     className="btn btn-ghost btn-xs btn-circle"
+                    onClick={() => handleStartEdit(dose)}
+                    aria-label="Edit entry"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                  <button
+                    className="btn btn-ghost btn-xs btn-circle"
                     onClick={() => setConfirmingDeleteId(dose.id)}
                     aria-label="Delete entry"
                   >
@@ -221,6 +261,52 @@ export default function MedTracker() {
                 {confirmingClear ? 'Clear history' : 'Delete'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {editingDose && (
+        <div
+          className="modal modal-open"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setEditingDose(null);
+          }}
+        >
+          <div className="modal-box">
+            <h3 className="font-bold text-lg">Edit entry</h3>
+            <form onSubmit={handleSaveEdit} className="flex flex-col gap-3 py-2">
+              <label className="flex flex-col gap-1 text-sm">
+                Amount
+                <input
+                  type="number"
+                  autoFocus
+                  className="input input-sm input-bordered"
+                  value={editAmount}
+                  onChange={(e) => setEditAmount(e.target.value)}
+                />
+              </label>
+              <label className="flex flex-col gap-1 text-sm">
+                Taken at
+                <input
+                  type="datetime-local"
+                  className="input input-sm input-bordered"
+                  value={editTimestamp}
+                  onChange={(e) => setEditTimestamp(e.target.value)}
+                />
+              </label>
+              <div className="modal-action">
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => setEditingDose(null)}
+                >
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary btn-sm">
+                  Save
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

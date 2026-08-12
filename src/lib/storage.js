@@ -123,6 +123,10 @@ export function addDose(medicationId, amount) {
   return dose;
 }
 
+export function updateDose(id, updates) {
+  saveDoses(getDoses().map((d) => (d.id === id ? { ...d, ...updates } : d)));
+}
+
 export function deleteDose(id) {
   saveDoses(getDoses().filter((d) => d.id !== id));
 }
